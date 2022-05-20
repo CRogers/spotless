@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
@@ -39,8 +38,6 @@ import com.diffplug.spotless.Provisioner;
 /** Should be package-private. */
 class GradleProvisioner {
 	private GradleProvisioner() {}
-
-	private static final AtomicInteger SPOTLESS_CONFIGURATION_COUNTER = new AtomicInteger();
 
 	enum Policy {
 		INDEPENDENT, ROOT_PROJECT, ROOT_BUILDSCRIPT;
@@ -115,7 +112,7 @@ class GradleProvisioner {
 		return (withTransitives, mavenCoords) -> {
 			try {
 				Configuration config = configurations.create("spotless"
-						+ SPOTLESS_CONFIGURATION_COUNTER.getAndIncrement());
+						+ new Request(withTransitives, mavenCoords).hashCode());
 				mavenCoords.stream()
 						.map(dependencies::create)
 						.forEach(config.getDependencies()::add);
