@@ -19,6 +19,7 @@ import java.io.File;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.gradle.api.GradleException;
@@ -111,16 +112,23 @@ class GradleProvisioner {
 	private static Provisioner forConfigurationContainer(Project project, ConfigurationContainer configurations, DependencyHandler dependencies) {
 		return (withTransitives, mavenCoords) -> {
 			try {
-				Configuration config = configurations.create("spotless"
-						+ new Request(withTransitives, mavenCoords).hashCode());
-				mavenCoords.stream()
-						.map(dependencies::create)
-						.forEach(config.getDependencies()::add);
-				config.setDescription(mavenCoords.toString());
-				config.setTransitive(withTransitives);
-				config.attributes(attr -> {
-					attr.attribute(Bundling.BUNDLING_ATTRIBUTE, project.getObjects().named(Bundling.class, Bundling.EXTERNAL));
-				});
+				String configurationName = "spotless"
+						+ new Request(withTransitives, mavenCoords).hashCode();
+
+				Configuration config = Optional.ofNullable(configurations.findByName(configurationName))
+						.orElseGet(() -> {
+							Configuration configuration = configurations.create(configurationName);
+							mavenCoords.stream()
+									.map(dependencies::create)
+									.forEach(configuration.getDependencies()::add);
+							configuration.setDescription(mavenCoords.toString());
+							configuration.setTransitive(withTransitives);
+							configuration.attributes(attr -> {
+								attr.attribute(Bundling.BUNDLING_ATTRIBUTE, project.getObjects().named(Bundling.class, Bundling.EXTERNAL));
+							});
+							return configuration;
+						});
+
 				return config.resolve();
 			} catch (Exception e) {
 				String projName = project.getPath().substring(1).replace(':', '/');
